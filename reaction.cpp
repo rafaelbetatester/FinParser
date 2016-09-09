@@ -57,6 +57,18 @@ void printMap(int t)
     fclose(fin);
 }
 
+void next_generation()
+{
+  for (int i = 0; i < width; i++)
+    for (int j = 0; j < height; j++)
+      {
+        grid[i][j].a = next[i][j].a;
+	grid[i][j].b = next[i][j].b;
+      }
+
+}
+
+
 double laplaceA(int x, int y)
 {
   double sumA = 0;
@@ -104,10 +116,9 @@ int main()
 	    double b = grid[x][y].b;
 	    next[x][y].a = a + dA*laplaceA(x,y) - a*b*b +  f*(1-a);
 	    next[x][y].b = b + dB*laplaceB(x,y) + a*b*b - (k+f)*b;
-	
-	    //    printMap(T);
-	    
+		    
 	  }
+      next_generation();
       printMap(T);
     }
   return 0;
