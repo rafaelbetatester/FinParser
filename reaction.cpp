@@ -5,8 +5,12 @@
 #include <string.h>
 #define width 5
 #define height 5
-#define dA 0.1
-#define dB 0.05
+#define dU 0.1
+#define dW 0.05
+#define alphaU 0.055
+#define alphaW 0.055
+#define muU 0.062
+#define muW 0.062
 #define f 0.055
 #define k 0.062
 #define dT 1
@@ -16,7 +20,7 @@ using namespace std;
 double T = 0;
 
 struct cell{
-  double a,b;
+  double u,w;
 };
 
 cell grid[width][height];
@@ -30,16 +34,16 @@ void initialize()
   for (int i = 0; i < width; i++)
     for (int j = 0; j < height; j++)
       {
-        grid[i][j].a = 1;
-        grid[i][j].b = 0;
-        next[i][j].a = 1;
-        next[i][j].b = 0;
+        grid[i][j].u = 1;
+        grid[i][j].w = 0;
+        next[i][j].u = 1;
+        next[i][j].w = 0;
       }
   for (int i = 1; i < 3; i++)
     for (int j = 1; j < 3; j++)
       {
-	grid[i][j].b = 1;
-	grid[i][j].a = 0.1;
+	grid[i][j].u = 1;
+	grid[i][j].w = 0.1;
       }
 
 }
@@ -55,7 +59,7 @@ void printMap(int t)
   for (int i = 0; i < width; i++)
     {
       for (int j = 0; j < height; j++)
-        fprintf(fin,"%lf ", grid[i][j].b);
+        fprintf(fin,"%lf ", grid[i][j].u);
       fprintf (fin,"\n");
     }
   fclose(fin);
@@ -66,16 +70,16 @@ void next_generation()
   for (int i = 0; i < width; i++)
     for (int j = 0; j < height; j++)
       {
-        grid[i][j].a = next[i][j].a;
-        grid[i][j].b = next[i][j].b;
+        grid[i][j].u = next[i][j].u;
+        grid[i][j].w = next[i][j].w;
       }
 
 }
 
 
-double laplaceA(int x, int y)
+double laplaceU(int x, int y)
 {
-  double sumA = -4*grid[x][y].a;
+  double sumU = -4*grid[x][y].u;
   int dX[] = {1,1,-1,-1};
   int dY[] = {1,-1,1,-1};
   for (int i = 0; i < 4; i ++)
@@ -86,16 +90,16 @@ double laplaceA(int x, int y)
         pX = 2*x - pX;
       if (pY < 0 || pY >= height)
         pY = 2*y - pY;
-      sumA += grid[pX][pY].a;
+      sumU += grid[pX][pY].u;
     }
 
-  return sumA;
+  return sumU;
 
 }
 
-double laplaceB(int x,int y)
+double laplaceW(int x,int y)
 {
-  double sumB = -4*grid[x][y].b;
+  double sumW = -4*grid[x][y].w;
   int dX[] = {1,-1,0,0};
   int dY[] = {0,0,1,-1};
   for (int i = 0; i < 4; i ++)
@@ -106,9 +110,9 @@ double laplaceB(int x,int y)
         pX = 2*x - pX;
       if (pY < 0 || pY >= height)
         pY = 2*y - pY;
-      sumB += grid[pX][pY].b;
+      sumW += grid[pX][pY].w;
     }
-  return sumB;
+  return sumW;
 }
 
 int main()
@@ -121,10 +125,10 @@ int main()
       for (int x = 0; x < width; x++)
         for (int y = 0; y < height; y++)
           {
-            double a = grid[x][y].a;
-            double b = grid[x][y].b;
-            next[x][y].a = a + dA*laplaceA(x,y) - a*b*b +  f*(1-a);
-            next[x][y].b = b + dB*laplaceB(x,y) + a*b*b - (k+f)*b;
+            double U = grid[x][y].u;
+            double W = grid[x][y].w;
+            next[x][y].u = U + dU*laplaceU(x,y) + alphaU*U/(U+W) -  muU*U*(1+k*(U+W));
+            next[x][y].w = W + dW*laplaceW(x,y) + alphaW*W - muW*W*(1+k*(U+W));
 
           }
       //      next_generation();
