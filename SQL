@@ -1,0 +1,126 @@
+package FinancialLanguage
+
+case class yc_Curve(CurveName: String)
+{
+
+  def compounding : String = CurveName match
+  {
+    case "DI1" => "Compounded"
+    case _ => "Linear"  
+  }
+  def calendar: String = CurveName match
+  {
+    case "DI1" => "1"
+    case _ => "-1"  
+  }
+  def DayCount: String = CurveName match
+  {
+    case "DI1" => "NDU/252"
+    case _ => "NDC/360"  
+  }
+}
+
+
+
+
+sealed abstract class SQLConstructor
+{
+
+  def SQL : String
+  def id: String
+}
+
+case class serializedCurve (Curve: String) extends SQLConstructor
+{
+  
+  var compounding = yc_Curve(Curve).compounding
+  var calendar = yc_Curve(Curve).calendar
+  var DayCount = yc_Curve(Curve).DayCount
+  
+  
+  override def SQL  = s"""
+
+ SELECT     
+ FUT_DD_date as dat,
+ yc_make_curve_msgPack(yc_business_days(FUT_DD_date,FUT_last_trading_day using parameters dayCount = 'NDU/252', calendar = '1'),
+           FUT_DD_yield)
+            over(partition by FUT_DD_date)
+    FROM Findb.TSC_Timeseries_Container
+    inner join Findb.AST_Asset
+        on TSC_sid = AST_pid
+    inner join Findb.FUT_Future
+        on AST_pid = FUT_pid
+    inner join Findb.ts_FUT_DD_Daily_Data
+        on FUT_DD_sid = FUT_pid
+    where (TSC_code like '%${Curve}%')
+"""
+  override def id  = Curve
+}
+
+case class simpleCurve (Curve: String) extends SQLConstructor
+{
+  
+  var compounding = yc_Curve(Curve).compounding
+  var calendar = yc_Curve(Curve).calendar
+  var DayCount = yc_Curve(Curve).DayCount
+  
+  
+  override def SQL  = s"""
+SELECT
+				FUT_DD_date settlement,
+			FUT_last_trading_day maturity,
+			FUT_DD_yield yield
+	FROM Findb.TSC_Timeseries_Container
+	inner join Findb.AST_Asset
+		on TSC_sid = AST_pid
+	inner join Findb.FUT_Future
+		on AST_pid = FUT_pid
+	inner join Findb.ts_FUT_DD_Daily_Data
+		on FUT_DD_sid = FUT_pid
+	where (TSC_code like '%${Curve}%')
+  order by FUT_DD_date, FUT_last_trading_day asc
+"""
+  override def id  = Curve
+}
+
+ case class InterpolatedCurve (Curve: String, Parameter: String) extends SQLConstructor
+{
+  
+  var compounding = yc_Curve(Curve).compounding
+  var calendar = yc_Curve(Curve).calendar
+  var DayCount = yc_Curve(Curve).DayCount
+  
+  
+  override def SQL  = "oi"
+  override def id  = "oi"
+}
+ 
+
+sealed abstract class  SQLGenerator {
+  def HeaderUp: String
+  def HeaderDown: String
+  def HeaderExpression: String
+  def FinalSQL =
+      s"""
+       |$HeaderUp
+       |$HeaderExpression
+       |$HeaderDown
+        """.stripMargin  
+}
+
+case class simpleGenerator(result: Expression) extends SQLGenerator
+{
+  var curves = result.SQLHeader
+  var expression =  result.SQLExpression
+  
+         
+    override def HeaderUp  = 
+      curves.map(x=>x.SQL).head
+      
+
+    override def HeaderExpression = 
+      ""
+    
+    override def HeaderDown  =
+    ""
+}
