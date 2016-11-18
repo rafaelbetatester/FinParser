@@ -1,0 +1,102 @@
+package FinancialLanguage
+import scala.util.parsing.combinator.JavaTokenParsers
+
+sealed abstract class Expression
+{
+
+  def SQLExpression: String
+  def SQLHeader: List[SQLConstructor]
+}
+
+case class Expression_List(t1: Expression, t2: Expression) extends Expression
+{
+  override def SQLExpression: String =
+    s"""(${t1.SQLExpression})"""
+    override def SQLHeader  = t1.SQLHeader ::: t2.SQLHeader
+}
+
+case class Add(t1: Expression, t2: Expression) extends Expression
+{
+  override def SQLExpression: String =
+    s"""(${t1.SQLExpression} + ${t2.SQLExpression})"""
+    override def SQLHeader  = t1.SQLHeader ::: t2.SQLHeader
+}
+case class Sub(t1: Expression, t2: Expression) extends Expression
+{
+  override def SQLExpression: String =
+    s"""(${t1.SQLExpression} - ${t2.SQLExpression})"""
+    override def SQLHeader  = t1.SQLHeader ::: t2.SQLHeader
+}
+case class Mul(t1: Expression, t2: Expression) extends Expression
+{
+  override def SQLExpression: String =
+    s"""(${t1.SQLExpression} * ${t2.SQLExpression})"""
+    override def SQLHeader  = t1.SQLHeader ::: t2.SQLHeader
+}
+case class Spread(t1: Expression, t2: Expression) extends Expression
+{
+  override def SQLExpression: String =
+    s"""yc_scalar_spread_cpp(${t1.SQLExpression}, ${t2.SQLExpression})"""
+    override def SQLHeader  = t1.SQLHeader ::: t2.SQLHeader
+}
+
+case class Conversion(t1: Expression, t2: Expression) extends Expression
+{
+
+  override def SQLExpression: String =
+    s"""(${t1.SQLExpression} CONVERSION ${t2.SQLExpression})"""
+    override def SQLHeader  = t1.SQLHeader ::: t2.SQLHeader
+} 
+
+case class Divide(t1: Expression, t2: Expression) extends Expression
+{
+  override def SQLExpression: String =
+    s"""(${t1.SQLExpression} / ${t2.SQLExpression})"""
+    override def SQLHeader  = t1.SQLHeader ::: t2.SQLHeader
+}
+
+case class Processor(expre: Expression, param: String, param2: String) extends Expression
+{
+  override def SQLExpression: String =
+    expre.SQLExpression
+    override def SQLHeader  = expre.SQLHeader
+}
+
+
+case class CField(cName: String) extends Expression
+{
+  override def SQLExpression: String = s"""curva_$cName.rate"""
+  override def SQLHeader = List(simpleCurve (cName))
+}
+
+case class Serialized_CField(cName: String) extends Expression
+{
+  override def SQLExpression: String = s"""curva_$cName.rate"""
+  override def SQLHeader = List(serializedCurve (cName))
+}
+
+
+case class Num(number: String) extends Expression
+{
+
+  override def SQLExpression: String = s"""$number"""
+   override def SQLHeader  = List()
+}
+
+case class FunctionField(fName: String, fArguments: String, parameter: String, parameter2: String) extends Expression
+{
+  var Name = 
+  fName match
+  {
+    case "->" => "yc_conversor(curva_DI1.rate,curva_linha.rate,curva_DI1.ndc,curva_DI1.ndu USING PARAMETERS " 
+    case a => a
+  }
+  override def SQLExpression: String = s"""$Name$fArguments)"""
+ override def SQLHeader =
+  fName match
+  {
+    case _ => List()
+  }
+}
+
+
