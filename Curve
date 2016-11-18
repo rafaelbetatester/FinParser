@@ -1,0 +1,6 @@
+package FinancialLanguage
+
+class Curve(name: String) {
+   var query = s"""select * from Findb.CRV_Curve where CRV_name='${name}'"""
+   
+}
