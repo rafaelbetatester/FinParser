@@ -1,0 +1,116 @@
+/*import org.scalatest.FlatSpec
+
+class FinancialParserTeste extends FlatSpec with FinancialExpressionParser {
+"A parser " should " parse simple expression" in {
+    assert(FinancialParser("bmf:PETR4[PX]{20/02/2015;20/03/2015}") == Some(SField("bmf","PETR4","PX","20/02/2015","20/03/2015",None)))       
+}
+
+it should " parse math binary expressions" in {
+    assert(FinancialParser("bmf:PETR4[PX]{20/02/2015;20/03/2015} - bmf:YHOO[PX]{20/02/2015;20/03/2015}") ==
+    Some(Sub(SField("bmf","PETR4","PX","20/02/2015","20/03/2015",None),SField("bmf","YHOO","PX","20/02/2015","20/03/2015",None))))
+  }
+
+it should " parse unary operators" in {
+   assert(FinancialParser("bmf:PETR4[PX]{20/02/2015;20/03/2015}.sum()") == 
+     Some(
+         SField("bmf","PETR4","PX","20/02/2015","20/03/2015",Some("sum"))))
+   assert(FinancialParser("bmf:PETR4[PX]{20/02/2015;20/03/2015}.^2()") == 
+     Some(
+         SField("bmf","PETR4","PX","20/02/2015","20/03/2015",Some("^2"))))
+         
+         assert(FinancialParser("bmf:PETR4[PX]{20/02/2015;20/03/2015}.sum() - bmf:YHOO[PX]{20/02/2015;20/03/2015}.sum()") == 
+   Some(Sub
+       (
+           SField("bmf","PETR4","PX","20/02/2015","20/03/2015",Some("sum"))
+           ,SField("bmf","YHOO","PX","20/02/2015","20/03/2015",Some("sum")))))
+           }
+
+it should " parse operators with precedence" in {
+    assert(FinancialParser("bmf:PETR4[PX]{20/02/2015;20/03/2015}  / bmf:PETR4[Volume]{20/02/2015;20/03/2015}  + bmf:YHOO[PX]{20/02/2015;20/03/2015}  / bmf:PETR4[Volume]{20/02/2015;20/03/2015}") ==
+   Some(Add
+       (Div
+           (SField("bmf","PETR4","PX","20/02/2015","20/03/2015",None)
+           ,SField("bmf","PETR4","Volume","20/02/2015","20/03/2015",None))
+           ,Div
+           (SField("bmf","YHOO","PX","20/02/2015","20/03/2015",None)
+               ,SField("bmf","PETR4","Volume","20/02/2015","20/03/2015",None)))))
+  }
+
+it should " parse expressions with extra or missing spaces?" in {
+    assert(FinancialParser("bmf:PETR4[PX]{20/02/2015;20/03/2015}/bmf:YHOO[PX]{20/02/2015;20/03/2015}") ==
+      Some(
+          Div(
+              SField("bmf","PETR4","PX","20/02/2015","20/03/2015",None)
+              ,SField("bmf","YHOO","PX","20/02/2015","20/03/2015",None))))
+    
+     assert(FinancialParser("bmf:   PETR4[PX]{20/02/2015;20/03/2015}  /   bmf:YHOO[PX]{20/02/2015;20/03/2015}") ==
+      Some(
+          Div(
+              SField("bmf","PETR4","PX","20/02/2015","20/03/2015",None)
+              ,SField("bmf","YHOO","PX","20/02/2015","20/03/2015",None))))
+              
+  }
+
+it should " parse expressions with parentheses" in {
+    assert(FinancialParser("(bmf:PETR4[PX]{20/02/2015;20/03/2015} - bmf:YHOO[PX]{20/02/2015;20/03/2015})/bmf:PETR4[PX]{20/02/2015;20/03/2015}") ==
+   Some(
+       Div(
+           Sub(
+               SField("bmf","PETR4","PX","20/02/2015","20/03/2015",None)
+               ,SField("bmf","YHOO","PX","20/02/2015","20/03/2015",None))
+               ,SField("bmf","PETR4","PX","20/02/2015","20/03/2015",None))))
+  }
+
+it should " not parse expressions with wrong dates" in {
+    assert(FinancialParser("bmf:PETR4[PX]{12/13/2015;20/03/2015}") ==
+          None)
+    assert(FinancialParser("bmf:PETR4[PX]{32/01/2015;20/03/2015}") ==
+        None)        
+    assert(FinancialParser("bmf:PETR4[PX]{112/02/2015;20/03/2015}") ==
+        None)
+      assert(FinancialParser("bmf:PETR4[PX]{12/01/015;20/03/2015}") ==
+        None)     
+  }
+
+}
+
+class FinancialEvaluatorTeste extends FinancialParserTeste {
+ "A parser Evaluator " should " evaluate simple expression" in {
+    assert(FinancialParser.evaluate("bmf:PETR4[PX]{20/02/2015;20/03/2015}") == Some(TsSimpleQuery("bmf","PETR4","PX","20/02/2015","20/03/2015", None)))    
+  }
+ it should " evaluate math expressions" in {
+    assert(FinancialParser.evaluate ("bmf:PETR4[PX]{20/02/2015;20/03/2015} - bmf:YHOO[PX]{20/02/2015;20/03/2015}") == 
+       Some(
+           TsInfixOperator("\"Vertica-Subtract\""
+               ,TsSimpleQuery("bmf","PETR4","PX","20/02/2015","20/03/2015", None)
+               ,TsSimpleQuery("bmf","YHOO","PX","20/02/2015","20/03/2015", None))))
+  }
+}
+
+class FinancialSQLTeste extends FinancialEvaluatorTeste
+{
+   "A SQL Generator " should " generate simple SQL expressions" in {
+    assert(FinancialParser.toSQL("bmf:PETR4[PX]{20/02/2015;20/03/2015}") == 
+        s"""SELECT 
+        |   20/02/2015 startDate,
+        |   20/03/2015 endDate, 
+        |   PETR4 id,
+        |   PX value
+        |FROM
+        |   bmf
+    """.stripMargin)
+    
+  }
+   it should " generate simple unary operator SQL expressions" in {
+    assert(FinancialParser.toSQL("bmf:PETR4[PX]{20/02/2015;20/03/2015}.sum()") == 
+        s"""SELECT 
+        |   20/02/2015 startDate,
+        |   20/03/2015 endDate, 
+        |   PETR4 id,
+        |   sum(PX) value
+        |FROM
+        |   bmf
+    """.stripMargin)
+   }
+}
+*/
