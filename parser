@@ -1,0 +1,44 @@
+package FinancialLanguage
+import scala.util.parsing.combinator.JavaTokenParsers
+
+trait Parser extends JavaTokenParsers {
+
+  lazy val expr: Parser[Expression] = term ~ rep("[+-]".r ~ term) ^^ {
+    case t ~ ts => ts.foldLeft(t) {
+      case (t1, "+" ~ t2) => Add(t1, t2)
+      case (t1, "-" ~ t2) => Sub(t1, t2)
+    }
+  }
+
+  lazy val term = factor ~ rep("[*/|]".r ~ factor) ^^ {
+    case t ~ ts => ts.foldLeft(t) {
+      case (t1, "*" ~ t2) => Mul(t1, t2)
+      case (t1, "/" ~ t2) => Spread(t1, t2)
+      case (t1, "|" ~ t2) => Divide(t1, t2)
+    }
+  }
+
+  lazy val factor = "(" ~> expr <~ ")" | serialCurve | curve | numeric
+
+  lazy val numeric = floatingPointNumber ^^ { case f => Num(f) }
+
+  lazy val serialCurve = serialcurveName ^^ { case n => Serialized_CField(n) }
+
+  lazy val curve = curveName ^^ { case n => CField(n) }
+
+  lazy val curveName = "[" ~ """^(.+?)\]""".r ^^ { case a ~ t => t.dropRight(1) }
+
+  lazy val serialcurveName = "&" ~ "[" ~ """^(.+?)\]""".r ^^ { case b ~ a ~ t => t.dropRight(1) }
+
+  lazy val curveParameter = """^(.*?)\}""".r ^^ { case a => a.dropRight(1) }
+
+  lazy val functionName = """^(.+?)\(""".r ^^ { case a => a.dropRight(1) }
+  lazy val functionArguments = """^((\s|.)+?)\)""".r ^^ { case a => a.dropRight(1) }
+
+  lazy val Unary =
+    "." ~ """^(.+?)\(""".r ~ ")" ^^ { case a ~ b ~ c => b.dropRight(1) }
+
+  lazy val date = "{" ~
+    """^(0?[1-9]|[12][0-9]|3[01])[\/\-](0?[1-9]|1[012])[\/\-]\d{4}""".r ~ "}" ^^ { case a ~ b ~ c => b }
+
+}
